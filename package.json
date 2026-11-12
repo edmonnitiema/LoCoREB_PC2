@@ -1,0 +1,46 @@
+{
+  "name": "locoreb",
+  "version": "1.0.0",
+  "description": "LoCoREB - Logiciel de Compilation des Résultats des Examens Blancs",
+  "author": "LoCoREB",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "bf.locoreb.desktop",
+    "productName": "LoCoREB",
+    "copyright": "LoCoREB",
+    "files": ["main.js", "preload.js", "index.html", "icon.png"],
+    "directories": { "output": "dist" },
+    "win": {
+      "icon": "icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LoCoREB",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "language": "1036",
+      "artifactName": "LoCoREB-Installateur.exe"
+    },
+    "portable": {
+      "artifactName": "LoCoREB-Portable.exe"
+    }
+  }
+}
