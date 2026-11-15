@@ -135,6 +135,10 @@ select,input,textarea{font:inherit;color:var(--tx);background:var(--sf);border:2
 label{display:block;font-size:calc(13px*var(--ts));color:var(--mu)}
 label input,label select,label textarea{display:block;width:100%;margin-top:3px;color:var(--tx)}
 textarea{min-height:130px}
+.bt.bpdf,.bt.bxl{min-width:11em;max-width:100%;box-sizing:border-box;text-align:center}.bt.zw{min-width:19.5em}.zg.zn{flex-wrap:nowrap}.zg.zn .bt{min-width:0;flex:0 1 11em;white-space:nowrap}.zg{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:100%}
+.bt.bpdf{background:#EC1C24;color:#fff}.bt.bxl{background:#217346;color:#fff}.bt.bpdf:hover{background:#C8161D}.bt.bxl:hover{background:#185C37}
+select.bt{width:auto;max-width:100%;margin:0;padding:8px 10px;white-space:nowrap}select.bt option{background:#fff;color:#141414;font-weight:400}
+.bt.b2{white-space:normal;line-height:1.2;text-align:center;padding:6px 14px}
 .bt{background:var(--ac);color:var(--sf);border:0;border-radius:5px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
 .bt.rdg{background:var(--rd);color:var(--tat)}.bt[disabled]{opacity:.45;cursor:not-allowed}.rst{border-color:var(--rd)}.rst h3{margin-top:0;color:var(--rd)}.fmod ul{padding-left:20px;margin:8px 0}
 .fr,.fr input{color:var(--rd)}
@@ -146,7 +150,7 @@ thead th{background:none}
 th.ve{border:0}
 th.fg{width:64px;min-width:64px}
 tbody th{text-align:left;font-weight:700;background:none}
-table.fx{table-layout:fixed}table.fx thead tr:first-child th:first-child{width:22%}table.fx td input{width:100%;max-width:72px}
+table.al{table-layout:fixed!important;min-width:860px}table.fx{table-layout:fixed}table.fx thead tr:first-child th:first-child{width:22%}table.fx td input{width:100%;max-width:72px}
 td input{width:62px;text-align:center;padding:4px;border-width:2px}
 td input[readonly]{background:none;cursor:default}
 /* Saisie des résultats : plus de cadre autour des chiffres, la saisie se fait directement dans la cellule du tableau */
@@ -235,7 +239,7 @@ S.zeps=S.zeps||[];
 if(!S.zeps.length){const vu=new Set();Object.values(S.meta).forEach(m=>{const z=String(m&&m.zep||"").trim(),k=z.toLowerCase();if(z&&!vu.has(k)){vu.add(k);S.zeps.push(z)}});S.zeps.sort((a,b)=>a.localeCompare(b,"fr"))}
 normZeps();
 S.disc=S.disc||["Dictée","Questions de dictée","Rédaction","Mathématiques","Lecture"];
-S.ui=S.ui||{tab:"ac",n:1,school:"",a:1,b:2,scope:"",zsc:""};
+S.ui=S.ui||{tab:"ac",n:1,school:"",a:1,b:2,scope:"",zsc:"",mz:"",c1:"",c2:"",c3:"",c4:"",cpg:1};
 const $=i=>document.getElementById(i);
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -301,12 +305,28 @@ const man=(x,d,j)=>{const k=d+"|co|"+j;if(x.m)return !!x.m[k];const v=x.p&&x.p[d
 const effco=(x,d,j)=>man(x,d,j)?num(x.p&&x.p[d]&&x.p[d].co&&x.p[d].co[j]):num(x.g&&x.g.co&&x.g.co[j]);
 let NOTE="";
 
+/* Effectif : saisi à l'examen blanc 1, repris tel quel dans les autres examens blancs ; modifiable (valeur propre à l'examen : x.g.eo[j]) */
+const efOwn=(n,s,j)=>{const x=((S.ex[n]||{}).d||{})[s];return !!(x&&x.g&&x.g.eo&&x.g.eo[j])};
+const efRaw=(n,s,j)=>{
+ const x=((S.ex[n]||{}).d||{})[s];
+ if(+n===1||efOwn(n,s,j))return x&&x.g&&x.g.ef?x.g.ef[j]:undefined;
+ const y=((S.ex[1]||{}).d||{})[s];return y&&y.g&&y.g.ef?y.g.ef[j]:undefined};
+/* Migration : une valeur déjà saisie dans un examen n>1 et différente de l'examen 1 est conservée comme valeur propre ; sinon l'examen reprend l'effectif de l'examen 1 */
+function migEf(){
+ Object.keys(S.ex||{}).forEach(n=>{if(+n===1||!S.ex[n])return;
+  Object.keys(S.ex[n].d||{}).forEach(sn=>{const x=S.ex[n].d[sn];if(!x||!x.g||!x.g.ef)return;
+   ["f","g"].forEach(j=>{const v=x.g.ef[j];if(v===undefined||v===null||v===""||(x.g.eo&&x.g.eo[j]))return;
+    const y=((S.ex[1]||{}).d||{})[sn],b=y&&y.g&&y.g.ef?y.g.ef[j]:undefined;
+    if(b!==undefined&&b!==null&&b!==""&&num(b)===num(v)){delete x.g.ef[j]}
+    else{x.g.eo=x.g.eo||{};x.g.eo[j]=1}})})})}
+migEf();
 function agg(n,list){
  const r={g:{ef:z(),co:z(),mo:z()},p:{}};
  S.disc.forEach(d=>r.p[d]={co:z(),mo:z()});
- list.forEach(s=>{const x=(S.ex[n]||{d:{}}).d[s];if(!x)return;
+ list.forEach(s=>{const x=(S.ex[n]||{d:{}}).d[s];
   const hs=v=>v!==undefined&&v!==null&&v!=="";
-  K.forEach(k=>["f","g"].forEach(j=>{const rv=x.g&&x.g[k]&&x.g[k][j];r.g[k][j]+=num(rv);if(hs(rv))r.g[k]["x"+j]=true}));
+  if(!x){["f","g"].forEach(j=>{const rv=efRaw(n,s,j);r.g.ef[j]+=num(rv);if(hs(rv))r.g.ef["x"+j]=true});return}
+  K.forEach(k=>["f","g"].forEach(j=>{const rv=k=="ef"?efRaw(n,s,j):(x.g&&x.g[k]&&x.g[k][j]);r.g[k][j]+=num(rv);if(hs(rv))r.g[k]["x"+j]=true}));
   S.disc.forEach(d=>["co","mo"].forEach(k=>["f","g"].forEach(j=>{const rv=k=="co"?(man(x,d,j)?(x.p&&x.p[d]&&x.p[d].co&&x.p[d].co[j]):(x.g&&x.g.co&&x.g.co[j])):(x.p&&x.p[d]&&x.p[d][k]&&x.p[d][k][j]);r.p[d][k][j]+=num(rv);if(hs(rv))r.p[d][k]["x"+j]=true})))});
  return r}
 
@@ -324,12 +344,16 @@ function tabs(r,edit){
  const p=S.disc.map((d,i)=>`<tr><th>${esc(capD(d))}</th>`+["co","mo"].map(k=>cell(`p.${i}.${k}.f`,r.p[d][k].f,r.p[d][k].xf,r.p[d][k])+cell(`p.${i}.${k}.g`,r.p[d][k].g,r.p[d][k].xg,r.p[d][k])+cm(`p.${i}.${k}.t`)).join("")+["f","g","t"].map(j=>cm(`p.${i}.tx.${j}`)).join("")+"</tr>").join("");
  const fgt='<th class="fr fg">F</th><th class="fg">G</th><th class="fg">T</th>';
  return `<h3>RÉSULTATS GLOBAUX</h3><div class="w"><table><thead><tr><th class="ve"></th>${fgt}</tr></thead><tbody>${g}</tbody></table></div>
-${edit?'<div class="ctl np" style="justify-content:flex-start"><button class="bt" type="button" onclick="viderCo()">Vider les « Ont composé » par discipline</button><button class="bt" type="button" onclick="autoCo()">Rétablir le remplissage automatique</button></div><p class="mu np">Les « Ont composé » par discipline reprennent automatiquement les résultats globaux. Pour en effacer un, videz sa case.</p>':""}<h3>TAUX DE RÉUSSITE PAR DISCIPLINE</h3><div class="w"><table class="fx sx"><colgroup><col class="c0"><col class="cn" span="6"><col class="ct" span="3"></colgroup><thead><tr><th rowspan="2">Disciplines</th><th colspan="3">Ont composé</th><th colspan="3">Ont eu la moyenne</th><th colspan="3">Taux de réussite</th></tr><tr>${fgt}${fgt}${fgt}</tr></thead><tbody>${p}</tbody></table></div>`}
+${edit&&+S.ui.n!==1?'<p class="mu np">L’effectif est repris de l’examen blanc n°1. Vous pouvez le modifier ici ; en vidant la case, on revient à l’effectif de l’examen blanc n°1.</p>':""}${edit?'<div class="ctl np" style="justify-content:flex-start"><button class="bt" type="button" onclick="viderCo()">Vider les « Ont composé » par discipline</button><button class="bt" type="button" onclick="autoCo()">Rétablir le remplissage automatique</button></div><p class="mu np">Les « Ont composé » par discipline reprennent automatiquement les résultats globaux. Pour en effacer un, videz sa case.</p>':""}<h3>TAUX DE RÉUSSITE PAR DISCIPLINE</h3><div class="w"><table class="fx sx"><colgroup><col class="c0"><col class="cn" span="6"><col class="ct" span="3"></colgroup><thead><tr><th rowspan="2">Disciplines</th><th colspan="3">Ont composé</th><th colspan="3">Ont eu la moyenne</th><th colspan="3">Taux de réussite</th></tr><tr>${fgt}${fgt}${fgt}</tr></thead><tbody>${p}</tbody></table></div>`}
 
 function setv(el){
  const [t,a,b,c]=el.dataset.p.split("."),x=D(S.ui.n,S.ui.school);
  if(!x.m){x.m={};S.disc.forEach(d=>["f","g"].forEach(j=>{if(man(x,d,j))x.m[d+"|co|"+j]=1}))}
- if(t=="g"){(x.g[a]=x.g[a]||{})[b]=el.value}
+ if(t=="g"){const n=S.ui.n;
+  if(a=="ef"&&+n!==1){x.g.eo=x.g.eo||{};
+   if(el.value===""){delete x.g.eo[b];if(x.g.ef)delete x.g.ef[b]}
+   else{x.g.eo[b]=1;(x.g.ef=x.g.ef||{})[b]=el.value}}
+  else (x.g[a]=x.g[a]||{})[b]=el.value}
  else{const d=S.disc[+a];x.p[d]=x.p[d]||{};(x.p[d][b]=x.p[d][b]||{})[c]=el.value;
   if(b=="co"){x.m[d+"|co|"+c]=el.value===""?2:1}}
  save();refresh(false)}
@@ -344,8 +368,8 @@ function autoCo(){
  save();refresh(true)}
 function lim(x,p){
  const [t,a,b,c]=p.split(".");
- if(t=="g")return a=="co"?num(x.g.ef&&x.g.ef[b]):a=="mo"?num(x.g.co&&x.g.co[b]):Infinity;
- return b=="co"?num(x.g.ef&&x.g.ef[c]):effco(x,S.disc[+a],c)}
+ if(t=="g")return a=="co"?num(efRaw(S.ui.n,S.ui.school,b)):a=="mo"?num(x.g.co&&x.g.co[b]):Infinity;
+ return b=="co"?num(efRaw(S.ui.n,S.ui.school,c)):effco(x,S.disc[+a],c)}
 function fix(el){
  const x=D(S.ui.n,S.ui.school);
  if(el.value!==""){let v=Math.max(0,Math.floor(num(el.value))),L=lim(x,el.dataset.p);
@@ -357,11 +381,12 @@ function refresh(force){
  document.querySelectorAll("[data-q]").forEach(e=>{let v=val(r,e.dataset.q);if(v==="—")v="";if(e.tagName==="INPUT")e.value=v;else e.textContent=v});
  document.querySelectorAll("input[data-p]").forEach(i=>{
   const [t,a,b,c]=i.dataset.p.split(".");
-  if(t=="p"&&b=="co"&&(force||document.activeElement!==i)){const o=r.p[S.disc[+a]].co;i.value=o[c]||(o["x"+c]?"0":"")}});
+  if(t=="p"&&b=="co"&&(force||document.activeElement!==i)){const o=r.p[S.disc[+a]].co;i.value=o[c]||(o["x"+c]?"0":"")}
+  if(t=="g"&&a=="ef"&&(force||document.activeElement!==i)){const o=r.g.ef;i.value=o[b]||(o["x"+b]?"0":"")}});
  validate(x)}
 function validate(x){
  const m=[],bad=new Set(),V=(p,t)=>{bad.add(p);m.push(t)};
- const ef=j=>num(x.g.ef&&x.g.ef[j]),gc=j=>num(x.g.co&&x.g.co[j]),gm=j=>num(x.g.mo&&x.g.mo[j]);
+ const ef=j=>num(efRaw(S.ui.n,S.ui.school,j)),gc=j=>num(x.g.co&&x.g.co[j]),gm=j=>num(x.g.mo&&x.g.mo[j]);
  ["f","g"].forEach(j=>{const sx=j=="f"?"filles":"garçons";
   if(gc(j)>ef(j))V("g.co."+j,`Résultats globaux (${sx}) : « Ont composé » (${gc(j)}) dépasse l’effectif (${ef(j)}).`);
   if(gm(j)>gc(j))V("g.mo."+j,`Résultats globaux (${sx}) : « Ont eu la moyenne » (${gm(j)}) dépasse « Ont composé » (${gc(j)}).`);
@@ -381,8 +406,8 @@ const dateLong=v=>{const p=String(v).split("-").map(Number);if(p.length<3||!p[0]
 const sig=(a,b,ext)=>{const I=S.id;migNm(I,"cceb","ccebn","ccebp");migNm(I,"rb","rbn","rbp");const d=dateLong(I.date||today()),A=a||{sx:I.rbs,tt:"R/BEPrim",nm:fullNm(I.rbn,I.rbp),jb:I.rbt},B=b||{sx:I.ccebs,tt:"CCEB",nm:fullNm(I.ccebn,I.ccebp),jb:I.ccebt};
  const blk=(sx,tt,nm,jb)=>`${sx=="F"?"La":sx=="M"?"Le":"Le/la"} ${tt}<i></i>${nm?`<b><u>${esc(nm)}</u></b>`:""}${jb?`<em style="font-style:italic">${esc(fmtTitre(jb))}</em>`:""}`;
  return `<div class="sig${ext?" sgx":""}"><table class="sgt"><tr><td></td><td class="sgd">Fait à ${esc(cap1(I.lieu))||"……"}, le ${d}</td></tr><tr><td>${blk(A.sx,A.tt,A.nm,A.jb)}</td><td>${blk(B.sx,B.tt,B.nm,B.jb)}</td></tr></table></div>`};
-const pdf=`<button class="bt np" onclick="exportPdf()">Exporter en PDF</button>`;
-const xl=`<button class="bt np" onclick="exportXlsx()">Exporter en Excel</button>`;
+const pdf=`<button class="bt np bpdf" onclick="exportPdf()">Exporter en PDF</button>`;
+const xl=`<button class="bt np bxl" onclick="exportXlsx()">Exporter en Excel</button>`;
 
 function pgId(){
  migNm(S.id,"cceb","ccebn","ccebp");migNm(S.id,"rb","rbn","rbp");
@@ -461,7 +486,7 @@ async function envoyerSauv(mode){
   if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name,text:"Sauvegarde LoCoREB"});return}
  }catch(e){if(e&&e.name==="AbortError")return}
  saveBlob(blob,name);toast("Le partage n’est pas disponible ici : le fichier a été téléchargé. Envoyez-le ensuite par "+cible+".")}
-function restaurer(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.ex||!d.schools)throw 0;S=d;S.zeps=S.zeps||[];normZeps();save();R()}catch(e){alert("Fichier de sauvegarde invalide.")}};r.readAsText(f)}
+function restaurer(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.ex||!d.schools)throw 0;S=d;S.zeps=S.zeps||[];normZeps();migEf();save();R()}catch(e){alert("Fichier de sauvegarde invalide.")}};r.readAsText(f)}
 
 /* ===== Fusion de données : plusieurs personnes saisissent, puis on réunit les fichiers ===== */
 const nkey=t=>nrm(t).replace(/[-_'\u2019.]/g," ").replace(/\s+/g," ").trim();
@@ -493,7 +518,8 @@ function fusionner(T,F,mode,rep){
    ["ef","co","mo"].forEach(k=>["f","g"].forEach(j=>{
     const fv=fx.g&&fx.g[k]&&fx.g[k][j];if(!aVal(fv))return;
     tx.g[k]=tx.g[k]||{};
-    put(tx.g[k],j,fv,(k==="ef"?"effectif":k==="co"?"ont composé":"ont eu la moyenne")+" "+j.toUpperCase())}));
+    put(tx.g[k],j,fv,(k==="ef"?"effectif":k==="co"?"ont composé":"ont eu la moyenne")+" "+j.toUpperCase());
+    if(k==="ef"&&+n!==1&&fx.g.eo&&fx.g.eo[j]){tx.g.eo=tx.g.eo||{};tx.g.eo[j]=1}}));
    Object.keys(fx.p||{}).forEach(dn=>{
     const dc=canon(T.disc,dn,"disc"),fp=fx.p[dn]||{};
     tx.p[dc]=tx.p[dc]||{};
@@ -537,7 +563,7 @@ function fusionAppliquer(){
  if(!FUS)return;
  const m=document.querySelector("#fmod input[name=fmode]:checked"),mode=m?m.value:"garder",{T}=fusionRun(FUS.good,mode);
  try{localStorage.setItem(KEY+"_avant_fusion",JSON.stringify({t:Date.now(),s:S}))}catch(e){}
- const ui=S.ui;S=T;S.ui=ui||T.ui;normDisc();save();fusionFermer();R();toast("Fusion appliquée.")}
+ const ui=S.ui;S=T;S.ui=ui||T.ui;normDisc();migEf();save();fusionFermer();R();toast("Fusion appliquée.")}
 function annulerFusion(){
  try{const b=JSON.parse(localStorage.getItem(KEY+"_avant_fusion"));if(!b||!b.s)throw 0;
   if(!confirm("Revenir aux données d'avant la dernière fusion ?"))return;
@@ -564,15 +590,16 @@ const grpBy=(f,em,or=[])=>{const m=new Map();
  return [...m.values()].sort((a,b)=>r(a)-r(b)||a.name.localeCompare(b.name,"fr"))};
 const gZ=()=>grpBy(s=>Mt(s).zep,"ZEP non renseignée");
 const gS=()=>grpBy(s=>Mt(s).st,"Statut non renseigné",["public","privé"]);
-function tGrp(n,t,G,nh){
+function tGrp(n,t,G,nh,tot){
  const fgt='<th class="fr fg">F</th><th class="fg">G</th><th class="fg">T</th>';
  const row=(nm,c,r,cl)=>`<tr class="${cl||""}"><th>${esc(nm)}</th><td>${c}</td>`+K.map(k=>`<td class="fr">${eF(r.g[k])}</td><td>${eG(r.g[k])}</td><td${k=="ef"?' class="b"':""}>${eT(r.g[k])}</td>`).join("")+["f","g","t"].map(j=>`<td${j=="f"?' class="fr"':""}>${val(r,"g.tx."+j)}</td>`).join("")+"</tr>";
- return `${nh?"":`<h3 style="text-align:center">RÉSULTATS PAR ${t.toUpperCase()}</h3>`}<div class="w"><table><thead><tr><th rowspan="2">${t}</th><th rowspan="2">Nombre<br>d’écoles</th><th colspan="3">Effectif</th><th colspan="3">Ont composé</th><th colspan="3">Ont eu la moyenne</th><th colspan="3">Taux de réussite</th></tr><tr>${fgt}${fgt}${fgt}${fgt}</tr></thead><tbody>${G.map(g=>row(g.name,g.list.length,agg(n,g.list))).join("")}${row("TOTAL CEB",S.schools.length,agg(n,S.schools),"tot")}</tbody></table></div>`}
+ return `${nh?"":`<h3 style="text-align:center">RÉSULTATS PAR ${t.toUpperCase()}</h3>`}<div class="w"><table><thead><tr><th rowspan="2">${t}</th><th rowspan="2">Nombre<br>d’écoles</th><th colspan="3">Effectif</th><th colspan="3">Ont composé</th><th colspan="3">Ont eu la moyenne</th><th colspan="3">Taux de réussite</th></tr><tr>${fgt}${fgt}${fgt}${fgt}</tr></thead><tbody>${G.map(g=>row(g.name,g.list.length,agg(n,g.list))).join("")}${row(tot?tot.lab:"TOTAL CEB",tot?tot.list.length:S.schools.length,agg(n,tot?tot.list:S.schools),"tot")}</tbody></table></div>`}
 
 /* Groupe choisi sur la page Résultats : une zone (ZEP) ou un statut ; null = TOTAL CEB */
 function reScope(){
- if(S.ui.tab==="re"&&(S.ui.rp==="3"||S.ui.rp==="4"))return null;
- const u=S.ui,key=g=>g.k||"~",z=gZ().find(g=>key(g)===u.rz),t=gS().find(g=>key(g)===u.rs);
+ if(S.ui.tab==="re"&&S.ui.rp==="3")return null;
+ const u=S.ui,key=g=>g.k||"~",z=gZ().find(g=>key(g)===u.rz),t=u.rp==="4"?null:gS().find(g=>key(g)===u.rs);
+ if(z&&t)return {lab:"Zone",g:{name:z.name+" – "+t.name,list:z.list.filter(x=>t.list.includes(x)),k:z.k},id:"z:"+key(z)};
  return z?{lab:"Zone",g:z,id:"z:"+key(z)}:t?{lab:"Statut",g:t,id:"s:"+key(t)}:null}
 /* Signataires des pages « zone » et « statut » : Le/la R/ZEP (à gauche) et Le/la R/BEPrim (à droite) */
 function sigZ(sc,ext){
@@ -582,10 +609,10 @@ function setZr(k,v){const sc=reScope();if(!sc)return;S.zr=S.zr||{};const o=(S.zr
 const RE_PG=[["1","Page 1 : Taux de réussite par discipline","TAUX DE RÉUSSITE PAR DISCIPLINE"],["2","Page 2 : Récapitulatif par école","RÉCAPITULATIF PAR ÉCOLE"],["3","Page 3 : Résultats par ZEP","RÉSULTATS PAR ZEP"],["4","Page 4 : Résultats par statut des écoles","RÉSULTATS PAR STATUT DES ÉCOLES"]];
 function pgRe(){
  const n=S.ui.n,L=S.schools,T=agg(n,L),sc=reScope(),key=g=>g.k||"~",rp=["1","2","3","4"].includes(S.ui.rp)?S.ui.rp:"1",sfx=(RE_PG.find(x=>x[0]===rp)||RE_PG[0])[2];
- const pick=(lab,G,cur,other)=>`<label class="gb">${lab}<select aria-label="${lab}" onchange="S.ui.${cur}=this.value;S.ui.${other}='';save();R()"><option value="">${lab==="Zone"?"Toutes les zones":"Tous les statuts"}</option>${G.map(g=>`<option value="${esc(key(g))}"${S.ui[cur]===key(g)?" selected":""}>${esc(g.name)}</option>`).join("")}</select></label>`;
+ const pick=(lab,G,cur,other)=>`<label class="gb">${lab}<select aria-label="${lab}" onchange="S.ui.${cur}=this.value;save();R()"><option value="">${lab==="Zone"?"TOTAL CEB":"Tous les statuts"}</option>${G.map(g=>`<option value="${esc(key(g))}"${S.ui[cur]===key(g)?" selected":""}>${esc(g.name)}</option>`).join("")}</select></label>`;
  const pgSel=`<label class="gb">Page<select aria-label="Page" onchange="S.ui.rp=this.value;save();R()">${RE_PG.map(x=>`<option value="${x[0]}"${rp===x[0]?" selected":""}>${x[1]}</option>`).join("")}</select></label>`;
- let ctl=`<div class="ctl np">${exSel("n")}${pgSel}${rp!=="3"&&rp!=="4"?pick("Zone",gZ(),"rz","rs")+pick("Statut",gS(),"rs","rz"):""}${pdf}${xl}</div>`;
- if(sc){const z=(S.zr&&S.zr[sc.id])||{};migNm(z,"nom","n","p");
+ let ctl=`<div class="ctl np">${exSel("n")}${pgSel}${rp!=="3"?pick("Zone",gZ(),"rz","rs"):""}${rp==="1"||rp==="2"?pick("Statut",gS(),"rs","rz"):""}${zAll()}</div>`;
+ if(sc&&sc.lab==="Zone"){const z=(S.zr&&S.zr[sc.id])||{};migNm(z,"nom","n","p");
   const zb=k=>ZRTRY&&!String(z[k]||"").trim()?"bad":"",rq='<span class="rqs" aria-hidden="true">*</span>';
    ctl+=`<div class="ctl np zrc"><label>Nom du R/ZEP ${rq}<input data-k="n" required aria-required="true" class="${zb('n')}" enterkeyhint="next" style="text-transform:uppercase" value="${esc(z.n||"")}" onchange="setZr('n',UPS(this.value.trim()))"></label><label>Prénom du R/ZEP ${rq}<input data-k="p" required aria-required="true" class="${zb('p')}" enterkeyhint="next" value="${esc(z.p||"")}" onchange="setZr('p',cap1(this.value))"></label><label>Sexe ${rq}<select data-k="sx" required aria-required="true" class="${zb('sx')}" onchange="setZr('sx',this.value)"><option value=""></option>${["F","M"].map(v=>`<option${z.sx===v?" selected":""}>${v}</option>`).join("")}</select></label><label>Emploi ou Titre honorifique ${rq}<input data-k="tt" required aria-required="true" class="${zb('tt')}" enterkeyhint="done" value="${esc(fmtTitre(z.tt))}" onchange="setZr('tt',fmtTitre(this.value))"></label></div>`;
    const zm=zrMiss();if(ZRTRY&&!zm.length)ZRTRY=false;
@@ -594,10 +621,13 @@ function pgRe(){
  const fgt='<th class="fr fg">F</th><th class="fg">G</th><th class="fg">T</th>';
  const rec=(list,TT,lab,ttl,lite)=>`${ttl?`<h3 style="text-align:center">${ttl}</h3>`:""}<div class="w"><table><thead><tr><th rowspan="2">N°</th><th rowspan="2">École</th>${lite?"":`<th rowspan="2">Statut</th><th rowspan="2">ZEP</th>`}<th colspan="3">Effectif</th><th colspan="3">Ont composé</th><th colspan="3">Ont eu la moyenne</th><th colspan="3">Taux de réussite</th></tr><tr>${fgt}${fgt}${fgt}${fgt}</tr></thead><tbody>${list.map((s,i)=>row(s,agg(n,[s]),"",i+1,lite)).join("")}${row(lab,TT,"tot",0,lite)}</tbody></table></div>`;
  if(sc){const G=sc.g,nm=sc.lab.toUpperCase()+" : "+esc(G.name.toLocaleUpperCase("fr")),TG=agg(n,G.list);
+  if(rp==="4"){const it=gS().map(g=>({name:g.name,list:g.list.filter(x=>G.list.includes(x))})).filter(i=>i.list.length);
+   return `${ctl}
+<div class="card">${hd()}${title(n,sfx)}<h3 style="text-align:center">${nm}</h3>${tGrp(n,"Statut",it,true,{lab:"TOTAL "+sc.lab.toUpperCase(),list:G.list})}${sigZ(sc)}</div>`}
   return rp==="2"?`${ctl}
-<div class="card por" data-rep="1">${hd()}${title(n,sfx)}${rec(G.list,TG,"TOTAL "+sc.lab.toUpperCase(),nm,true)}${sigZ(sc,true)}</div>`
+<div class="card por" data-rep="1">${hd()}${title(n,sfx)}${rec(G.list,TG,"TOTAL "+sc.lab.toUpperCase(),nm,true)}${sc.lab==="Zone"?sigZ(sc,true):sig(null,null,true)}</div>`
   :`${ctl}
-<div class="card por">${hd()}${title(n,sfx)}<h3 style="text-align:center">${nm}</h3>${tabs(TG,false)}${sigZ(sc)}</div>`}
+<div class="card por">${hd()}${title(n,sfx)}<h3 style="text-align:center">${nm}</h3>${tabs(TG,false)}${sc.lab==="Zone"?sigZ(sc):sig()}</div>`}
  return rp==="2"?`${ctl}
 <div class="card por" data-rep="1">${hd()}${title(n,sfx)}${rec(L,T,"TOTAL CEB","",true)}${sig(null,null,true)}</div>`
  :rp==="3"?`${ctl}
@@ -607,49 +637,77 @@ function pgRe(){
  :`${ctl}
 <div class="card por">${hd()}${title(n,sfx)}<h3 style="text-align:center">TOTAL CEB</h3>${tabs(T,false)}${sig()}</div>`}
 
+/* Sélection « ZEP et/ou statut » (Ordre de mérite, Comparatif, exports) : v = "" (CEB) | clé de zone | clé de zone + "|" + clé de statut | "|"+clé de statut (« s:clé » : ancien format) */
+const scKey=g=>g.k||"~";
+const scMk=(z,s)=>s?(z||"")+"|"+s:(z||"");
+function scP(v){v=String(v||"");if(v.slice(0,2)==="s:")return {z:"",s:v.slice(2)};const i=v.indexOf("|");return i<0?{z:v,s:""}:{z:v.slice(0,i),s:v.slice(i+1)}}
+function scG(v){
+ const p=scP(v);if(!p.z&&!p.s)return null;
+ const zo=p.z?gZ().filter(z=>z.list&&z.list.length).find(z=>scKey(z)===p.z):null,
+  st=p.s?gS().find(g=>scKey(g)===p.s&&g.list&&g.list.length):null;
+ if(p.z&&!zo)return null;if(!zo&&!st)return null;
+ const t=zo?UPS(zo.name):"",zlab=zo?(/^ZEP\b/i.test(t)?t:"ZEP "+t):"",slab=st?"STATUT : "+UPS(st.name):"",
+  list=zo&&st?zo.list.filter(x=>st.list.includes(x)):zo?zo.list:st.list,nm=zo?zo.name+(st?" – "+st.name:""):"Statut "+st.name;
+ return {kind:zo?"z":"s",v:scMk(zo?p.z:"",st?p.s:""),z:zo?p.z:"",s:st?p.s:"",list,id:zo?"z:"+p.z:"s:"+p.s,lab:[zlab,slab].filter(Boolean).join(" – "),nm,fn:nm}}
+/* deux listes : CEB / ZEP, puis statut (Tous / Public / Privé) — le statut se choisit aussi pour une ZEP */
+function scSet(key,part,val){const p=scP(S.ui[key]),g=scG(S.ui[key]);const z=g?g.z:"",st=g?g.s:"";S.ui[key]=part==="z"?scMk(val,st):scMk(z,val);save();R()}
+function scSels(key,aria){
+ const g=scG(S.ui[key]),zs=gZ().filter(z=>z.list&&z.list.length),zo=g&&g.z?zs.find(z=>scKey(z)===g.z):null,base=zo?zo.list:S.schools,cs=g?g.s:"",cz=g?g.z:"",
+  sts=gS().filter(t=>t.list&&(scKey(t)===cs||t.list.some(x=>base.includes(x)))),
+  zl=z=>{const t=UPS(z.name);return /^ZEP\b/i.test(t)?t:"ZEP "+t};
+ return `<select aria-label="${aria}" onchange="scSet('${key}','z',this.value)"><option value=""${cz?"":" selected"}>CEB</option>${zs.map(z=>`<option value="${esc(scKey(z))}"${scKey(z)===cz?" selected":""}>${esc(zl(z))}</option>`).join("")}</select><select aria-label="Statut" onchange="scSet('${key}','s',this.value)"><option value=""${cs?"":" selected"}>Tous les statuts</option>${sts.map(t=>`<option value="${esc(scKey(t))}"${scKey(t)===cs?" selected":""}>${esc("STATUT : "+UPS(t.name))}</option>`).join("")}</select>`}
+function meZ(){return scG(S.ui.mz)}
 function pgMe(){
- const n=S.ui.n,c=S.ui.crit,di=(c===""||c===undefined||!S.disc[+c])?-1:+c;
+ const n=S.ui.n,di=-1;
  const pick=r=>di<0?r.g:r.p[S.disc[di]];
- const rows=S.schools.map(s=>{const o=pick(agg(n,[s]));return {s,o,t:tn(o,"t")}});
+ const mz=meZ(),SC=mz?mz.list:S.schools,zl=z=>{const t=UPS(z.name);return /^ZEP\b/i.test(t)?t:"ZEP "+t};
+ const rows=SC.map(s=>{const o=pick(agg(n,[s]));return {s,o,t:tn(o,"t")}});
  rows.sort((a,b)=>((a.t==null)-(b.t==null))||((b.t==null?0:b.t)-(a.t==null?0:a.t))||a.s.localeCompare(b.s,"fr"));
  const rk=x=>{if(x.t==null)return "—";const k=1+rows.filter(y=>y.t!=null&&y.t>x.t).length;return k==1?"1er":k+"e"};
  const rt=(o,j)=>j=="t"?pc(o.mo.f+o.mo.g,o.co.f+o.co.g):pc(o.mo[j],o.co[j]);
  const cells=o=>["co","mo"].map(k=>`<td class="fr">${eF(o[k])}</td><td>${eG(o[k])}</td><td>${eT(o[k])}</td>`).join("")+["f","g","t"].map(j=>`<td${j=="f"?' class="fr"':""}>${rt(o,j)}</td>`).join("");
  const fgt='<th class="fr fg">F</th><th class="fg">G</th><th class="fg">T</th>';
- const body=rows.map(x=>`<tr><td>${rk(x)}</td><th>${esc(UPS(x.s))}</th>${cells(x.o)}</tr>`).join("")+`<tr class="tot"><td></td><th>TOTAL CEB</th>${cells(pick(agg(n,S.schools)))}</tr>`;
- return `<div class="ctl np">${exSel("n")}<select aria-label="Classement selon" onchange="S.ui.crit=this.value;save();R()"><option value="">RÉSULTATS GLOBAUX</option>${S.disc.map((d,i)=>`<option value="${i}"${i==di?" selected":""}>${esc(capD(d))}</option>`).join("")}</select>${pdf}${xl}</div>
-<div class="card por" data-rep="1">${hd()}<h2>ORDRE DE MÉRITE DES ÉCOLES – EXAMEN BLANC N°${n} – NIVEAU ${esc(E(n).niveau)}</h2><p style="text-align:center;margin:0">${di<0?"RÉSULTATS GLOBAUX":esc(capD(S.disc[di]))}</p>
+ const body=rows.map(x=>`<tr><td>${rk(x)}</td><th>${esc(UPS(x.s))}</th>${cells(x.o)}</tr>`).join("")+`<tr class="tot"><td></td><th>${mz?"TOTAL "+esc(mz.lab):"TOTAL CEB"}</th>${cells(pick(agg(n,SC)))}</tr>`;
+ const zk=mz?mz.v:"",
+ zs=scSels("mz","Ordre de mérite pour"),
+ zo1=mz&&mz.kind==="z"?((S.zr&&S.zr[mz.id])||{}):null;if(zo1)migNm(zo1,"nom","n","p");
+ const zw=zo1&&ZR_REQ.some(x=>!String(zo1[x[0]]==null?"":zo1[x[0]]).trim())?`<p class="warn np" role="alert" style="margin:0 0 10px">Signataire R/ZEP à compléter pour : ${esc(UPS(mz.nm))}. Renseignez-le dans la page Résultats (choisissez la zone), puis revenez ici.</p>`:"";
+ return `<div class="ctl np">${exSel("n")}${zs}${zAll()}</div>
+${zw}<div class="card por" data-rep="1">${hd()}<h2>ORDRE DE MÉRITE DES ÉCOLES – EXAMEN BLANC N°${n} – NIVEAU ${esc(E(n).niveau)}</h2>${mz?`<p style="text-align:center;margin:0">${esc(mz.lab)}</p>`:""}<p style="text-align:center;margin:0">${di<0?"RÉSULTATS GLOBAUX":esc(capD(S.disc[di]))}</p>
 <div class="w"><table class="f12"><thead><tr><th rowspan="2">Rang</th><th rowspan="2">École</th><th colspan="3">Ont composé</th><th colspan="3">Ont eu la moyenne</th><th colspan="3">Taux de réussite</th></tr><tr>${fgt}${fgt}${fgt}</tr></thead><tbody>${body}</tbody></table></div>
-<p class="mu">Classement selon le taux de réussite (T). Les écoles à égalité ont le même rang.</p>${sig()}</div>`}
+<p class="mu">Classement selon le taux de réussite (T). Les écoles à égalité ont le même rang.</p>${mz&&mz.kind==="z"?sigZ({id:mz.id}):sig()}</div>`}
 
 function pgCp(){
- const u=S.ui,cv=u.cv==="zep"||u.cv==="ec"?u.cv:"",sc=cv==="ec"&&!!(u.scope&&S.schools.includes(u.scope)),L=sc?[u.scope]:S.schools,A=agg(u.a,L),B=agg(u.b,L);
+ const u=S.ui;
  const fgt='<th class="fr fg">F</th><th class="fg">G</th><th class="fg">T</th>';
  const cEc=(v,txt,j)=>{const r=v==null?0:Math.round(v*100)/100,c=[j=="f"?"fr":"",r>0?"ep":r<0?"en":""].filter(Boolean).join(" ");return `<td${c?` class="${c}"`:""}>${r<0&&j=="f"?`<span class="cer">${txt}</span>`:txt}</td>`};
- const ecs=(a,b)=>["f","g","t"].map(j=>{const x=tn(a,j),y=tn(b,j);return cEc(x==null||y==null?null:y-x,ec(x,y),j)}).join("");
- const gdf=(A,B)=>{ const g=K.map((k,i)=>`<tr><th>${LB[i]}</th>`+[A,B].map(r=>`<td class="fr">${eF(r.g[k])}</td><td>${eG(r.g[k])}</td><td>${eT(r.g[k])}</td>`).join("")+[["f",B.g[k].f-A.g[k].f],["g",B.g[k].g-A.g[k].g],["t",B.g[k].f+B.g[k].g-A.g[k].f-A.g[k].g]].map(x=>cEc(x[1],(hz(A.g[k])||hz(B.g[k]))?sg(x[1]):"",x[0])).join("")+"</tr>").join("")
+ const obs=(a,b)=>{const x=tn(a,"t"),y=tn(b,"t");if(x==null||y==null)return "<td></td>";const r=Math.round((y-x)*100)/100;return r>0?'<td class="ep">Résultats en hausse</td>':r<0?'<td class="en">Résultats en baisse</td>':"<td>Résultats constants</td>"};
+ const ecs=(a,b)=>["f","g","t"].map(j=>{const x=tn(a,j),y=tn(b,j);return cEc(x==null||y==null?null:y-x,ec(x,y),j)}).join("")+obs(a,b);
+ const gdf=(A,B)=>{ const g=K.map((k,i)=>`<tr><th>${LB[i]}</th>`+[A,B].map(r=>`<td class="fr">${eF(r.g[k])}</td><td>${eG(r.g[k])}</td><td>${eT(r.g[k])}</td>`).join("")+[["f",B.g[k].f-A.g[k].f],["g",B.g[k].g-A.g[k].g],["t",B.g[k].f+B.g[k].g-A.g[k].f-A.g[k].g]].map(x=>cEc(x[1],(hz(A.g[k])||hz(B.g[k]))?sg(x[1]):"",x[0])).join("")+(()=>{const a=A.g[k],b=B.g[k];if(!(hz(a)||hz(b)))return "<td></td>";const d=b.f+b.g-a.f-a.g;return d>0?'<td class="ep">Effectif en hausse</td>':d<0?'<td class="en">Effectif en baisse</td>':"<td>Effectif constant</td>"})()+"</tr>").join("")
   +`<tr class="tot"><th>Taux de réussite</th>`+[A,B].map(r=>["f","g","t"].map(j=>`<td${j=="f"?' class="fr"':""}>${val(r,"g.tx."+j)}</td>`).join("")).join("")+ecs(A.g,B.g)+"</tr>";
  const p=S.disc.map((d,i)=>`<tr><th>${esc(capD(d))}</th>`+[A,B].map(r=>["f","g","t"].map(j=>`<td${j=="f"?' class="fr"':""}>${val(r,`p.${i}.tx.${j}`)}</td>`).join("")).join("")+ecs(A.p[d],B.p[d])+"</tr>").join("");
  return {g,p}};
- const {g,p}=gdf(A,B);
  const cr=(nm,list,c,i,num)=>{const a=agg(u.a,list),b=agg(u.b,list);return `<tr class="${c||""}">${num?`<td>${i||""}</td>`:""}<th>${esc(nm)}</th>`+[a,b].map(r=>["f","g","t"].map(j=>`<td${j=="f"?' class="fr"':""}>${val(r,"g.tx."+j)}</td>`).join("")).join("")+ecs(a.g,b.g)+"</tr>"};
  const ct=(t,items,num)=>`<h3>TAUX DE RÉUSSITE PAR ${t.toUpperCase()}</h3><div class="w"><table>${head(t,0,num)}<tbody>${items.map((i,k)=>cr(i.name,i.list,"",k+1,num)).join("")}${cr("TOTAL CEB",S.schools,"tot",0,num)}</tbody></table></div>`;
- const head=(a,b,num)=>`<thead><tr>${num?'<th rowspan="2">N°</th>':""}<th rowspan="2"${a?' style="text-align:left"':' class="ve"'}>${esc(String(a==="École"?"Écoles":a).toUpperCase())}</th><th colspan="3" style="text-align:center">EXAMEN BLANC N°${u.a}<br>(NIVEAU ${esc(String(E(u.a).niveau).toUpperCase())})</th><th colspan="3" style="text-align:center">EXAMEN BLANC N°${u.b}<br>(NIVEAU ${esc(String(E(u.b).niveau).toUpperCase())})</th><th colspan="3" style="text-align:center">ÉCART</th></tr><tr>${fgt}${fgt}${fgt}</tr></thead>`;
- const ttp=n=>`<p style="text-align:center;margin:0">${esc(n)}</p>`,ttlH=`<h2>COMPARAISON ENTRE LES EXAMENS BLANCS <span style="white-space:nowrap">N°${u.a} (NIVEAU ${esc(String(E(u.a).niveau).toUpperCase())}) ET N°${u.b} (NIVEAU ${esc(String(E(u.b).niveau).toUpperCase())})</span></h2>`,ttl=ttlH+ttp(L.length==1?UPS(L[0]):"TOTAL CEB");
- const cardGD=(gg,pp,tt,sg)=>`<div class="card por">${hd()}${tt}<h3>RÉSULTATS GLOBAUX</h3><div class="w"><table>${head("")}<tbody>${gg}</tbody></table></div>
-<h3>TAUX DE RÉUSSITE PAR DISCIPLINE</h3><div class="w"><table class="fx">${head("Disciplines")}<tbody>${pp}</tbody></table></div>${sg||sig()}</div>`;
- const cardEc=z=>`<div class="card por" data-rep="1">${hd()}${ttlH}<h3>TAUX DE RÉUSSITE PAR ÉCOLE – ZEP : ${esc(z.name)}</h3><div class="w"><table>${head("École",0,true)}<tbody>${z.list.map((x,k)=>cr(UPS(x),[x],"",k+1,true)).join("")}${cr("TOTAL ZEP",z.list,"tot",0,true)}</tbody></table></div>${sigZ({id:"z:"+(z.k||"~")})}</div>`;
- const vsel=`<select aria-label="Affichage" onchange="S.ui.cv=this.value;S.ui.scope='';S.ui.zsc='';save();R()"><option value=""${cv===""?" selected":""}>TOTAL CEB</option><option value="zep"${cv==="zep"?" selected":""}>PAR ZEP</option><option value="ec"${cv==="ec"?" selected":""}>ÉCOLES</option></select>`;
- const zall=gZ().filter(z=>z.list&&z.list.length),zsel=cv==="zep"&&zall.some(z=>(z.k||"~")===u.zsc)?u.zsc:"";
- const zselH=cv==="zep"?`<label class="schl np"><span class="lt"><b>ZEP</b> (Sélectionnez une ZEP, ou toutes les ZEP.)</span><select aria-label="ZEP" onchange="S.ui.zsc=this.value;save();R()"><option value=""${zsel===""?" selected":""}>TOUTES LES ZEP</option>${zall.map(z=>`<option value="${esc(z.k||"~")}"${(z.k||"~")===zsel?" selected":""}>${esc(UPS(z.name))}</option>`).join("")}</select></label>`:"";
- let body;
- if(sc||cv==="")body=cardGD(g,p,ttl)+(sc?"":`<div class="card por">${hd()}${ttl}${ct("ZEP",gZ())}${ct("Statut",gS())}${sig()}</div>`);
- else if(cv==="ec")body=`<div class="card por" data-rep="1">${hd()}${ttl}${ct("École",S.schools.map(s=>({name:UPS(s),list:[s]})),true)}${sig()}</div>`;
- else body=gZ().filter(z=>z.list&&z.list.length).filter(z=>!zsel||(z.k||"~")===zsel).map(z=>{const a2=agg(u.a,z.list),b2=agg(u.b,z.list),r=gdf(a2,b2);return cardGD(r.g,r.p,ttlH+ttp("ZEP : "+z.name),sigZ({id:"z:"+(z.k||"~")}))+cardEc(z)}).join("");
- const zmiss=cv==="zep"?zall.filter(z=>!zsel||(z.k||"~")===zsel).filter(z=>{const o=(S.zr&&S.zr["z:"+(z.k||"~")])||{};migNm(o,"nom","n","p");return ZR_REQ.some(x=>!String(o[x[0]]==null?"":o[x[0]]).trim())}).map(z=>z.name):[];
+ const head=(a,b,num)=>`<thead><tr>${num?'<th rowspan="2">N°</th>':""}<th rowspan="2"${a?' style="text-align:left"':' class="ve"'}>${esc(String(a==="École"?"Écoles":a).toUpperCase())}</th><th colspan="3" style="text-align:center">EXAMEN BLANC N°${u.a}<br>(NIVEAU ${esc(String(E(u.a).niveau).toUpperCase())})</th><th colspan="3" style="text-align:center">EXAMEN BLANC N°${u.b}<br>(NIVEAU ${esc(String(E(u.b).niveau).toUpperCase())})</th><th colspan="3" style="text-align:center">ÉCART</th><th rowspan="2">OBSERVATIONS</th></tr><tr>${fgt}${fgt}${fgt}</tr></thead>`;
+ const ttp=n=>`<p style="text-align:center;margin:0">${esc(n)}</p>`,ttlH=`<h2>COMPARAISON ENTRE LES EXAMENS BLANCS <span style="white-space:nowrap">N°${u.a} (NIVEAU ${esc(String(E(u.a).niveau).toUpperCase())}) ET N°${u.b} (NIVEAU ${esc(String(E(u.b).niveau).toUpperCase())})</span></h2>`;
+ const cardGD=(gg,pp,tt,sg)=>`<div class="card por">${hd()}${tt}<h3>RÉSULTATS GLOBAUX</h3><div class="w"><table class="al"><colgroup><col style="width:22%">${'<col style="width:64px">'.repeat(9)}<col></colgroup>${head("")}<tbody>${gg}</tbody></table></div>
+<h3>TAUX DE RÉUSSITE PAR DISCIPLINE</h3><div class="w"><table class="fx al"><colgroup><col style="width:22%">${'<col style="width:64px">'.repeat(9)}<col></colgroup>${head("Disciplines")}<tbody>${pp}</tbody></table></div>${sg||sig()}</div>`;
+ const zall=gZ().filter(z=>z.list&&z.list.length),zl=z=>{const n=UPS(z.name);return /^ZEP\b/i.test(n)?n:"ZEP "+n},zf=k=>scG(k),zk=z=>z?z.v:"";
+ const pgN=[1,2,3,4].includes(+u.cpg)?+u.cpg:1,zc=pgN===4?null:zf(u["c"+pgN]),rz=zc?zc.list:S.schools,lab=zc?zc.lab:"TOTAL CEB",tz=zc?(zc.kind==="s"?"TOTAL STATUT":zc.s?"TOTAL ZEP (STATUT)":"TOTAL ZEP"):"TOTAL CEB",sgn=zc&&zc.kind==="z"?sigZ({id:zc.id}):sig();
+ const csel=`<div class="ctl np"><b style="margin-right:6px">${esc(CP_PG[pgN-1])}</b>${pgN===4?"":scSels("c"+pgN,"CEB / ZEP")}</div>`;
+ let pg;
+ if(pgN===1){const d1=gdf(agg(u.a,rz),agg(u.b,rz));pg=cardGD(d1.g,d1.p,ttlH+ttp(lab),sgn)}
+ else if(pgN===2)pg=`<div class="card por" data-rep="1">${hd()}${ttlH}${ttp(lab)}<h3>TAUX DE RÉUSSITE PAR ÉCOLE</h3><div class="w"><table>${head("École",0,true)}<tbody>${rz.map((x,k)=>cr(UPS(x),[x],"",k+1,true)).join("")}${cr(tz,rz,"tot",0,true)}</tbody></table></div>${sgn}</div>`;
+ else if(pgN===3){const it=gS().map(i=>({name:i.name,list:i.list.filter(x=>rz.includes(x))})).filter(i=>i.list.length);pg=`<div class="card por">${hd()}${ttlH}${ttp(lab)}<h3>TAUX DE RÉUSSITE PAR STATUT DES ÉCOLES</h3><div class="w"><table>${head("Statut")}<tbody>${it.map((i,k)=>cr(UPS(i.name),i.list,"",k+1)).join("")}${cr(tz,rz,"tot",0)}</tbody></table></div>${sgn}</div>`}
+ else{const it=zall.filter(z=>!zc||scKey(z)===zc.v);pg=`<div class="card por">${hd()}${ttlH}${ttp(lab)}<h3>RÉCAPITULATIF PAR ZEP</h3><div class="w"><table>${head("ZEP",0,true)}<tbody>${it.map((z,k)=>cr(zl(z),z.list,"",k+1,true)).join("")}${cr(tz,rz,"tot",0,true)}</tbody></table></div>${sgn}</div>`}
+ const zmiss=[zc].filter(z=>z&&z.kind==="z").filter(z=>{const o=(S.zr&&S.zr[z.id])||{};migNm(o,"nom","n","p");return ZR_REQ.some(x=>!String(o[x[0]]==null?"":o[x[0]]).trim())}).map(z=>z.nm);
  const zwarn=zmiss.length?`<p class="warn np" role="alert" style="margin:0 0 10px">Signataire R/ZEP à compléter pour : ${esc(zmiss.join(", "))}. Renseignez-le dans la page Résultats (choisissez la zone), puis revenez ici.</p>`:"";
- return `<div class="ctl np">${exSel("a")}${exSel("b")}${vsel}${zselH}${cv==="ec"?`<label class="schl np"><span class="lt"><b>ÉCOLE</b> (Sélectionnez votre école ici. Pour la retrouver facilement, tapez ses premières lettres.)</span>${schoolBox("scope",u.scope||"","Total CEB (ou tapez une école)","lst-cp")}</label>`:""}${pdf}${xl}</div>
-${zwarn}${body}`}
+ const psel=`<b style="margin:0 6px 0 10px">Pages</b><select aria-label="Pages" onchange="S.ui.cpg=+this.value;save();R()">${CP_PG.map((t,i)=>`<option value="${i+1}"${pgN===i+1?" selected":""}>${esc(t)}</option>`).join("")}</select>`;
+ return `<div class="ctl np">${exSel("a")}${exSel("b")}${psel}${zAll()}</div>
+${zwarn}${csel}${pg}`}
+const CP_PG=["Résultats globaux et par discipline","Taux de réussite par école","Taux de réussite par statut des écoles","Récapitulatif par ZEP"];
+function cpSfx(){const u=S.ui,pn=[1,2,3,4].includes(+u.cpg)?+u.cpg:1,z=pn===4?null:scG(u["c"+pn]);return "_"+CP_PG[pn-1]+(z?"_"+UPS(z.fn):"")}
 
 /* ===== Licence (même principe que LoGeNo : identifiant propre à l'appareil + code signé Ed25519 avec date d'expiration) ===== */
 const LIC_KEY="locoreb-lic-v1",LPUB="86abec07e30211fd8bee4cdc7a548600b6ec823b3e7575f0ad202a8fec6f86c5",B32A="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",WA_NUM="22678214250";
@@ -840,6 +898,7 @@ function buildPdf(cards,cnt){
   if(sNat>AV){cw=sMin<AV?L.nat.map((n,i)=>L.min[i]+(n-L.min[i])*(AV-sMin)/(sNat-sMin)):L.nat.map(n=>n*AV/sNat)}
   else{const target=ncol<=4?Math.min(AV,Math.max(sNat,150)):AV;cw=L.nat.map(n=>n*target/sNat)}
   if(tbl.classList.contains("fx")&&ncol>2){const m=Math.max(...cw.slice(1)),k=Math.min(1,(AV-cw[0])/(m*(ncol-1)));cw=cw.map((w,i)=>i?m*k:w)}
+  if(tbl.classList.contains("al")&&ncol===11){fs=8;doc.setFont("helvetica","bold");doc.setFontSize(fs);const fg=Math.max(doc.getTextWidth("100,00")+3.5,AV*0.062),f0=AV*0.22;cw=[f0,...Array(9).fill(fg),AV-f0-9*fg]}
   const tw=cw.reduce((a,b)=>a+b,0),x0=M+(AV-tw)/2,cx=[];let ax=x0;cw.forEach(w=>{cx.push(ax);ax+=w});
   const lh=fs*0.3528*1.25,pad=1.8;
   const lines=o=>{doc.setFont("helvetica",o.bold?"bold":"normal");doc.setFontSize(fs);let w=0;for(let k=0;k<o.cs;k++)w+=cw[o.c+k];return o.txt.split("\n").flatMap(t=>wrapT(doc,t,w-2.5))};
@@ -1059,7 +1118,7 @@ function buildXlsx(cards){
     f.forEach(o=>{if(o.ve)return;
      const FM=fm[o.r+","+o.c],
       v=o.left||o.head||o.fill&&o.bold&&!/\d/.test(o.txt)?{s:o.txt}:xlVal(o.txt),
-      sty={b:o.bold,col:FM&&FM.ec?(FM.j==="f"?"C1121F":"141414"):o.green?"15803D":o.red?"C1121F":"141414",fill:o.fill?"E7ECE8":null,bd:true,al:o.left?"left":"center",wrap:true,nf:FM?FM.nf:(v.nf||0),lk:!!FM};
+      sty={b:o.bold,col:FM&&FM.ec?(FM.j==="f"?"C1121F":"141414"):o.green?"15803D":o.red?"C1121F":"141414",fill:null,bd:true,al:o.left?"left":"center",wrap:true,nf:FM?FM.nf:(v.nf||0),lk:!!FM};
      const s=ST.get(sty),r0=r+o.r;
      if(FM){const cv=xlCache(o.txt);put(r0,o.c,{f:FM.f,v:cv.n!==undefined?cv.n:cv.s,num:cv.n!==undefined,s});if(FM.ec)cfRefs.push(xlCol(o.c)+(r0+1))}
      else put(r0,o.c,{v:v.n!==undefined?v.n:v.s,num:v.n!==undefined,s});
@@ -1074,6 +1133,7 @@ function buildXlsx(cards){
   const pz=[...card.querySelectorAll("p")].map(t=>t.textContent.trim()).find(t=>/^ZEP : /.test(t));
   const tl=/^RÉSULTATS DE L’EXAMEN BLANC/i.test(h2[0]||"")?h2[0].split(" – ").pop():"";
   let nm=h3.find(t=>/^(ZONE|STATUT) :/i.test(t))||(/ZEP$|ÉCOLES?$|DISCIPLINE$/i.test(tl)?tl:null)||h3.find(t=>/ZONE|STATUT|RÉCAP|PAR ÉCOLE|PAR ZEP/i.test(t))||(pz&&h3.some(t=>/GLOBAUX/i.test(t))?pz:h3.some(t=>/GLOBAUX/i.test(t))?"Résultats globaux":h2.some(t=>/MÉRITE/i.test(t))?"Ordre de mérite":h2[0]||h3[h3.length-1]||"Feuille "+(ci+1));
+  if(card.dataset.zn)nm=card.dataset.zn;
   nm=nm.replace(/^TAUX DE RÉUSSITE PAR ÉCOLE – ZEP : /i,"Écoles ZEP ").replace(/^ZEP : /,"ZEP ").replace(/RÉCAPITULATIF/i,"Récap.").replace(/\s*:\s*/g," ").replace(/[\[\]:*?\/\\]/g," ").replace(/\s+/g," ").trim().slice(0,31)||"Feuille";let nn=nm,k=2;while(used.has(nn.toLowerCase())){nn=nm.slice(0,27)+" ("+k+")";k++}used.add(nn.toLowerCase());
   const rowsXml=R.map((row,i)=>{if(!row)return"";const cs=Object.keys(row).map(Number).sort((a,b)=>a-b).map(c=>{const o=row[c],ref=xlCol(c)+(i+1);
     if(o.f){const fx=`<f>${xlEsc(o.f)}</f>`;return o.num?`<c r="${ref}" s="${o.s}">${fx}<v>${o.v}</v></c>`:`<c r="${ref}" s="${o.s}" t="str">${fx}<v>${xlEsc(o.v)}</v></c>`}
@@ -1097,12 +1157,13 @@ function exportXlsx(){
  if(!cards.length){toast("Aucun document à exporter sur cette page.");return}
  try{saveBlob(buildXlsx(cards),xlFileName(),false,xlDossier())}catch(e){toast("Le fichier Excel n’a pas pu être créé : "+(e&&e.message||e))}}
 
+function zEff(){const all=gZ().filter(z=>z.list&&z.list.length),k=S.ui.zsc;return all.some(z=>(z.k||"~")===k)?k:(all[0]?(all[0].k||"~"):"")}
 function pdfFileName(){
  const u=S.ui,t=u.tab,n=u.n,ex=i=>"Examen blanc n"+i+"_Niveau "+E(i).niveau,cb=String(S.id.ceb||"").trim(),P=safeName(!cb?"CEB":/^ceb\b/i.test(cb)?cb:"CEB "+cb);
  if(t==="sa")return safeName(P+"_"+u.school+"_"+ex(n))+".pdf";
  if(t==="re"){const sc=reScope(),rp=["1","2","3","4"].includes(u.rp)?u.rp:"1",lb={"1":"Taux de réussite par discipline","2":"Récapitulatif par école","3":"Par ZEP","4":"Par statut des écoles"}[rp];return safeName(P+"_Résultats_"+lb+(sc?"_"+sc.lab+" "+sc.g.name:"")+"_"+ex(n))+".pdf"}
- if(t==="me"){const c=u.crit===""||u.crit===undefined||!S.disc[+u.crit]?"global":S.disc[+u.crit];return safeName(P+"_Ordre de mérite_"+ex(n)+"_"+c)+".pdf"}
- if(t==="cp")return safeName(P+"_Comparatif_EB"+u.a+"_EB"+u.b+"_Niveau "+(E(u.a).niveau==E(u.b).niveau?E(u.a).niveau:E(u.a).niveau+"-"+E(u.b).niveau)+(u.cv==="ec"?(u.scope?"_"+u.scope:"_Écoles"):u.cv==="zep"?(u.zsc&&u.zsc!=="~"?"_ZEP "+u.zsc.toUpperCase():"_Par ZEP"):""))+".pdf";
+ if(t==="me"){const c="global",mz=meZ();return safeName(P+"_Ordre de mérite_"+ex(n)+"_"+c+(mz?"_"+UPS(mz.fn):""))+".pdf"}
+ if(t==="cp")return safeName(P+"_Comparatif_EB"+u.a+"_EB"+u.b+"_Niveau "+(E(u.a).niveau==E(u.b).niveau?E(u.a).niveau:E(u.a).niveau+"-"+E(u.b).niveau)+cpSfx())+".pdf";
  return P+".pdf"}
 /* Dossier créé pour les PDF : « FICHIERS PDF_EB N°<n>_<NIVEAU> » (comparatif : « EB N°1-2 », niveaux séparés par « - » s'ils diffèrent) */
 function dossierPdf(){
@@ -1110,6 +1171,53 @@ function dossierPdf(){
  if(u.tab==="cp"){n=u.a===u.b?String(u.a):u.a+"-"+u.b;nv=E(u.a).niveau===E(u.b).niveau?E(u.a).niveau:E(u.a).niveau+"-"+E(u.b).niveau}
  else{n=String(u.n);nv=E(u.n).niveau}
  return safeName("FICHIERS PDF_EB N°"+n+"_"+nv)}
+/* Boutons d'export par ZEP (Résultats pages 1-2, Ordre de mérite, Comparatif pages 1-3) :
+   « Exporter / pour cette ZEP » = la page affichée ; « Exporter / pour toutes les ZEP » = un seul PDF avec une section par ZEP */
+function zepCtx(){const u=S.ui,t=u.tab;
+ if(t==="me")return {cur:()=>u.mz||"",set:v=>{u.mz=v}};
+ if(t==="cp"){const p=[1,2,3].includes(+u.cpg)?+u.cpg:1;return {cur:()=>u["c"+p]||"",set:v=>{u["c"+p]=v}}}
+ if(t==="re"){const rp=["1","2","3","4"].includes(u.rp)?u.rp:"1";if(rp==="1"||rp==="2"||rp==="4")return {cur:()=>scMk(u.rz||"",rp==="4"?"":(u.rs||"")),set:v=>{const q=scP(v);u.rz=q.z;if(rp!=="4")u.rs=q.s}}}
+ return null}
+/* libellés selon la sélection : ZEP ou statut */
+function zLab(c){const g=c?scG(c.cur()):null;return g&&g.kind==="z"?["pour cette ZEP","pour toutes les ZEP"]:null}
+function zSel(kind,L){
+ const pf=kind==="pdf",lab=pf?"Exporter en PDF":"Exporter en Excel",cl=pf?"bpdf":"bxl",f=pf?["exportPdf()","exportPdfZeps()"]:["exportXlsx()","exportXlsxZeps()"];
+ return `<div class="zg np"><button class="bt zw np ${cl}" type="button" style="white-space:nowrap" onclick="${f[0]}">${lab} ${L[0]}</button><button class="bt zw np ${cl}" type="button" style="white-space:nowrap" onclick="${f[1]}">${lab} ${L[1]}</button></div>`}
+const zDrop=()=>["re","cp"].includes(S.ui.tab);
+function zBtns(){
+ const c=zepCtx(),L=zLab(c);if(!c||!L)return pdf;
+ if(zDrop())return zSel("pdf",L);
+ const b2=(f,t)=>`<button class="bt b2 np bpdf" type="button" onclick="${f}">Exporter en PDF<br>${t}</button>`;
+ return b2("exportPdf()",L[0])+b2("exportPdfZeps()",L[1])}
+function zAll(){const a=zBtns(),b=zBtnsX();return a===pdf&&b===xl?`<div class="zg zn np">${a}${b}</div>`:a+b}
+function zBtnsX(){
+ const c=zepCtx(),L=zLab(c);if(!c||!L)return xl;
+ if(zDrop())return zSel("xlsx",L);
+ const b2=(f,t)=>`<button class="bt b2 np bxl" type="button" onclick="${f}">Exporter en Excel<br>${t}</button>`;
+ return b2("exportXlsx()",L[0])+b2("exportXlsxZeps()",L[1])}
+function zepCollect(){
+ const c=zepCtx(),u=S.ui;if(!c)return null;
+ const cg=scG(c.cur()),isS=!!(cg&&cg.kind==="s");
+ const all=(isS?gS():gZ()).filter(z=>z.list&&z.list.length);
+ if(!all.length){toast(isS?"Aucun statut à exporter.":"Aucune ZEP à exporter.");return null}
+ const sv={rz:u.rz,rs:u.rs,mz:u.mz,c1:u.c1,c2:u.c2,c3:u.c3,c4:u.c4},cards=[],miss=[];let name="";
+ try{
+  all.forEach(z=>{const v=isS?scMk("",scKey(z)):scMk(scKey(z),cg.s),g=scG(v);c.set(v);R();
+   const o=(S.zr&&S.zr[g.id])||{};migNm(o,"nom","n","p");
+   if(ZR_REQ.some(x=>!String(o[x[0]]==null?"":o[x[0]]).trim()))miss.push(g.lab);
+   [...new Set([...document.querySelectorAll("#app .hd")].map(h=>h.closest(".card")))].filter(Boolean).forEach(cd=>{const cl=cd.cloneNode(true);cl.dataset.zn=g.lab;cards.push(cl)})});
+  c.set(!isS&&cg.s?scMk("",cg.s):"");name=pdfFileName().replace(/\.pdf$/i,"")+(isS?"_Tous les statuts":"_Toutes les ZEP")
+ }finally{Object.assign(u,sv);R()}
+ if(miss.length){toast("Signataire R/ZEP à compléter pour : "+miss.join(", ")+". Renseignez-le dans la page Résultats (choisissez la zone ou le statut), puis revenez ici.");return null}
+ if(!cards.length){toast("Aucun document à exporter sur cette page.");return null}
+ return {cards,name}}
+
+function exportPdfZeps(){
+ const r=zepCollect();if(!r)return;
+ try{saveBlob(buildPdf(r.cards,buildPdf(r.cards)._cnt).output(),r.name+".pdf",true,dossierPdf())}catch(e){toast("Le PDF n’a pas pu être créé : "+(e&&e.message||e))}}
+function exportXlsxZeps(){
+ const r=zepCollect();if(!r)return;
+ try{saveBlob(buildXlsx(r.cards),r.name+".xlsx",false,xlDossier())}catch(e){toast("Le fichier Excel n’a pas pu être créé : "+(e&&e.message||e))}}
 function exportPdf(){
  if(zrBlock())return;
  if(S.ui.tab==="sa"&&srMiss().length){srFocus();return}
@@ -1286,7 +1394,7 @@ function idChk(){if(!IDTRY)return;const m=idMiss();document.querySelectorAll("[d
 /* Résultats : les champs du R/ZEP sont obligatoires pour passer aux étapes suivantes ou exporter en PDF */
 let ZRTRY=false;
 const ZR_REQ=[["n","Nom du R/ZEP"],["p","Prénom du R/ZEP"],["sx","Sexe du R/ZEP"],["tt","Emploi ou Titre honorifique du R/ZEP"]];
-function zrMiss(){const sc=reScope();if(!sc)return[];const z=(S.zr&&S.zr[sc.id])||{};migNm(z,"nom","n","p");return ZR_REQ.filter(x=>!String(z[x[0]]==null?"":z[x[0]]).trim()).map(x=>x[1])}
+function zrMiss(){const sc=reScope();if(!sc||sc.lab!=="Zone")return[];const z=(S.zr&&S.zr[sc.id])||{};migNm(z,"nom","n","p");return ZR_REQ.filter(x=>!String(z[x[0]]==null?"":z[x[0]]).trim()).map(x=>x[1])}
 function zrMsgTxt(m){return "Complétez d’abord les informations du R/ZEP. Champs à renseigner : "+m.join(", ")+"."}
 function zrBlock(){if(S.ui.tab!=="re"||!zrMiss().length)return false;ZRTRY=true;R();toast("Complétez d’abord les informations du R/ZEP : tous les champs sont obligatoires.");return true}
 /* Agrandissement du texte du système (WebView Android) : on mesure le facteur appliqué et on le compense pour garder la même mise en page que dans Chrome */
